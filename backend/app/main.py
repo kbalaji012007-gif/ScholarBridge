@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.core.config import settings
+
 from app.api.v1.router import api_router
 from app.database.base import create_tables
 
