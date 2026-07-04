@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: scholarbridge_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./scholarbridge.db}
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: scholarbridge_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  uploads_data:
