@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import secrets
+import traceback
 
 from app.database.base import get_db
 from app.models.user import User
@@ -31,21 +32,28 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     try:
         verification_token = create_verification_token(user_data.email)
 
-        user = User(
-            email=user_data.email,
-            hashed_password=get_password_hash(user_data.password),
-            full_name=user_data.full_name,
-            verification_token=verification_token,
-            is_verified=False,
-        )
+           user = User(
+        email=user_data.email,
+        hashed_password=get_password_hash(user_data.password),
+        full_name=user_data.full_name,
+        verification_token=verification_token,
+        is_verified=False,
+    )
 
-        db.add(user)
+    db.add(user)
+
+    try:
         db.commit()
-        db.refresh(user)
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        raise
 
-        notif = Notification(
-            user_id=user.id,
-            title="Welcome to ScholarBridge! 🎓",
+    db.refresh(user)
+
+    notif = Notification(
+        user_id=user.id,
+        title="Welcome to ScholarBridge! 🎓",
             message="Complete your profile to discover scholarships you're eligible for.",
             notif_type="info",
             action_url="/dashboard/profile",
