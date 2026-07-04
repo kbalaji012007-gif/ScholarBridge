@@ -20,23 +20,49 @@ from app.services.document_verification import calculate_profile_completion
 router = APIRouter()
 
 
+from sqlalchemy.exc import SQLAlchemyError
+
 @router.post("/signup", response_model=dict, status_code=201)
 def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == user_data.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    verification_token = create_verification_token(user_data.email)
-    user = User(
-        email=user_data.email,
-        hashed_password=get_password_hash(user_data.password),
-        full_name=user_data.full_name,
-        verification_token=verification_token,
-        is_verified=False,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        verification_token = create_verification_token(user_data.email)
+
+        user = User(
+            email=user_data.email,
+            hashed_password=get_password_hash(user_data.password),
+            full_name=user_data.full_name,
+            verification_token=verification_token,
+            is_verified=False,
+        )
+
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        notif = Notification(
+            user_id=user.id,
+            title="Welcome to ScholarBridge! 🎓",
+            message="Complete your profile to discover scholarships you're eligible for.",
+            notif_type="info",
+            action_url="/dashboard/profile",
+        )
+
+        db.add(notif)
+        db.commit()
+
+        return {
+            "message": "Account created successfully",
+            "user_id": user.id,
+        }
+
+    except Exception as e:
+        db.rollback()
+        print("SIGNUP ERROR:", repr(e))
+        raise
 
     # Create welcome notification
     notif = Notification(
