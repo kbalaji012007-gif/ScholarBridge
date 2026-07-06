@@ -19,7 +19,6 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./scholarbridge.db"
 
     # CORS
-       # CORS
     FRONTEND_URL: str = "https://scholar-bridge-lyart.vercel.app"
 
     # File Upload

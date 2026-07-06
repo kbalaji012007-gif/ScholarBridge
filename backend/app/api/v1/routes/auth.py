@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta
 import secrets
 import traceback
+import logging
 
 from app.database.base import get_db
 from app.models.user import User
@@ -16,15 +18,15 @@ from app.core.security import (
     create_access_token, create_refresh_token,
     create_verification_token, decode_token
 )
-from app.services.document_verification import calculate_profile_completion
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-from sqlalchemy.exc import SQLAlchemyError
-
 @router.post("/signup", response_model=dict, status_code=201)
 def signup(user_data: UserCreate, db: Session = Depends(get_db)):
+    # Check for duplicate email
     existing = db.query(User).filter(User.email == user_data.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -32,86 +34,88 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     try:
         verification_token = create_verification_token(user_data.email)
 
-           user = User(
-        email=user_data.email,
-        hashed_password=get_password_hash(user_data.password),
-        full_name=user_data.full_name,
-        verification_token=verification_token,
-        is_verified=False,
-    )
-
-    db.add(user)
-
-    try:
-        db.commit()
-    except Exception:
-        db.rollback()
-        traceback.print_exc()
-        raise
-
-    db.refresh(user)
-
-    notif = Notification(
-        user_id=user.id,
-        title="Welcome to ScholarBridge! 🎓",
-            message="Complete your profile to discover scholarships you're eligible for.",
-            notif_type="info",
-            action_url="/dashboard/profile",
+        user = User(
+            email=user_data.email,
+            hashed_password=get_password_hash(user_data.password),
+            full_name=user_data.full_name,
+            verification_token=verification_token,
+            is_active=True,
+            is_verified=False,
+            profile_completion=0,
         )
+        db.add(user)
 
-        db.add(notif)
-        db.commit()
+        try:
+            db.commit()
+        except SQLAlchemyError as db_err:
+            db.rollback()
+            logger.error("DB commit failed during signup (user insert): %s", repr(db_err))
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Database error: {repr(db_err)}")
+
+        db.refresh(user)
+
+        # Create welcome notification
+        try:
+            notif = Notification(
+                user_id=user.id,
+                title="Welcome to ScholarBridge! 🎓",
+                message="Complete your profile to discover scholarships you're eligible for.",
+                notif_type="info",
+                action_url="/dashboard/profile",
+            )
+            db.add(notif)
+            db.commit()
+        except SQLAlchemyError as notif_err:
+            # Non-fatal: rollback the notification but keep the user
+            db.rollback()
+            logger.warning("Failed to create welcome notification: %s", repr(notif_err))
+
+        logger.info("[SIGNUP] New user created: %s (id=%s)", user.email, user.id)
 
         return {
-            "message": "Account created successfully",
+            "message": "Account created successfully. Please verify your email.",
             "user_id": user.id,
+            "verification_token": verification_token,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
-        print("SIGNUP ERROR:", repr(e))
-        raise
-
-    # Create welcome notification
-    notif = Notification(
-        user_id=user.id,
-        title="Welcome to ScholarBridge! 🎓",
-        message="Complete your profile to discover scholarships you're eligible for.",
-        notif_type="info",
-        action_url="/dashboard/profile",
-    )
-    db.add(notif)
-    db.commit()
-
-    # In production: send verification email
-    print(f"[EMAIL] Verify: token={verification_token}")
-
-    return {
-        "message": "Account created successfully. Please verify your email.",
-        "user_id": user.id,
-        "verification_token": verification_token,  # expose for dev convenience
-    }
+        logger.error("SIGNUP ERROR: %s", repr(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Signup failed: {repr(e)}")
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == credentials.email).first()
-    if not user or not verify_password(credentials.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+    try:
+        user = db.query(User).filter(User.email == credentials.email).first()
+        if not user or not verify_password(credentials.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password",
+            )
+        if not user.is_active:
+            raise HTTPException(status_code=400, detail="Account is deactivated")
+
+        access_token = create_access_token({"sub": str(user.id)})
+        refresh_token = create_refresh_token({"sub": str(user.id)})
+
+        logger.info("[LOGIN] User logged in: %s (id=%s)", user.email, user.id)
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            user=UserOut.model_validate(user),
         )
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Account is deactivated")
-
-    access_token = create_access_token({"sub": str(user.id)})
-    refresh_token = create_refresh_token({"sub": str(user.id)})
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=UserOut.model_validate(user),
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("LOGIN ERROR: %s", repr(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Login failed: {repr(e)}")
 
 
 @router.get("/verify-email")
@@ -139,8 +143,7 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
         user.reset_token = reset_token
         user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
         db.commit()
-        # In production: send email
-        print(f"[EMAIL] Reset token: {reset_token}")
+        logger.info("[EMAIL] Reset token generated for: %s", request.email)
     # Always return success to prevent email enumeration
     return {"message": "If the email exists, a reset link has been sent."}
 

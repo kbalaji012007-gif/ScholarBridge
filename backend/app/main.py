@@ -2,11 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+import logging
 
 from app.core.config import settings
-
 from app.api.v1.router import api_router
 from app.database.base import create_tables
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -16,15 +18,17 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS
+# CORS — allow Vercel frontend and local dev origins
 app.add_middleware(
     CORSMiddleware,
-   allow_origins=[
-    settings.FRONTEND_URL,
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://scholar-bridge-lyart.vercel.app",
-],
+    allow_origins=[
+        "https://scholar-bridge-lyart.vercel.app",
+        settings.FRONTEND_URL,
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,8 +44,19 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 
 @app.on_event("startup")
 async def startup_event():
-    create_tables()
-    await seed_demo_data()
+    """Create tables and optionally seed demo data on startup."""
+    try:
+        create_tables()
+        logger.info("Database tables created/verified successfully.")
+    except Exception as e:
+        logger.error("Failed to create database tables: %s", repr(e))
+        # Don't crash the app — Render will show healthy; tables may already exist
+
+    try:
+        await seed_demo_data()
+        logger.info("Demo data seeding complete.")
+    except Exception as e:
+        logger.warning("Demo data seeding failed (non-fatal): %s", repr(e))
 
 
 async def seed_demo_data():
@@ -92,8 +107,9 @@ async def seed_demo_data():
             )
             db.add(student)
             db.commit()
+            db.refresh(student)
 
-        # Seed scholarships
+        # Seed scholarships only if none exist
         if db.query(Scholarship).count() == 0:
             scholarships = [
                 Scholarship(
@@ -188,13 +204,21 @@ async def seed_demo_data():
             for s in scholarships:
                 db.add(s)
             db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error("seed_demo_data error: %s", repr(e))
+        raise
     finally:
         db.close()
 
 
 @app.get("/")
 def root():
-    return {"message": f"Welcome to {settings.APP_NAME} API", "version": settings.APP_VERSION, "docs": "/docs"}
+    return {
+        "message": f"Welcome to {settings.APP_NAME} API",
+        "version": settings.APP_VERSION,
+        "docs": "/docs",
+    }
 
 
 @app.get("/health")
