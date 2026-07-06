@@ -4,7 +4,11 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__truncate_error=False,  # suppress 72-byte ValueError; we truncate manually below
+)
 
 
 def _truncate_password(password: str) -> str:
