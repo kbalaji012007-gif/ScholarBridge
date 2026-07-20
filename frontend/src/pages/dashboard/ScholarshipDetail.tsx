@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ExternalLink, Bookmark, BookmarkCheck, Send,
   CheckCircle2, AlertCircle, XCircle, Award, Calendar,
-  IndianRupee, FileText, Globe, Loader2, Users, MapPin, Sparkles
+  IndianRupee, FileText, Globe, Loader2, Users, MapPin, Sparkles, X
 } from 'lucide-react';
 import { Scholarship } from '@/types';
 import { scholarshipService } from '@/services/scholarships';
@@ -19,6 +19,9 @@ export default function ScholarshipDetail() {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [modalStep, setModalStep] = useState(1);
+  const [bypassWarning, setBypassWarning] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -309,16 +312,191 @@ export default function ScholarshipDetail() {
             </Link>
           ) : (
             <button
-              onClick={handleApply}
+              onClick={() => { setShowApplyModal(true); setModalStep(1); }}
               disabled={applying || scholarship.eligibility_status === 'not_eligible'}
               className="btn-primary text-xs px-6 py-2.5"
             >
               {applying ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-              {applying ? 'Submitting...' : 'One-Click Apply'}
+              {applying ? 'Submitting...' : 'Apply Now'}
             </button>
           )}
         </div>
       </div>
+
+      {/* ─── Apply Checklist & Confirmation Modal ─── */}
+      <AnimatePresence>
+        {showApplyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-lg overflow-hidden bg-slate-900 border border-slate-800 rounded-3xl p-6 text-slate-100 shadow-2xl"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowApplyModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+              >
+                <X size={16} />
+              </button>
+
+              {/* Step 1: Document Checklist */}
+              {modalStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                      Application Checklist
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Check your required documents before continuing to the official scholarship portal.
+                    </p>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="bg-slate-950/60 p-4 border border-slate-800 rounded-2xl">
+                    <div className="flex justify-between items-center text-xs font-semibold mb-2">
+                      <span className="text-slate-400">Document Readiness</span>
+                      <span className="text-emerald-400">
+                        {scholarship.required_documents?.length ? (
+                          `${(scholarship.required_documents.length - (scholarship.missing_documents?.length || 0))} / ${scholarship.required_documents.length} Ready`
+                        ) : (
+                          'No Documents Required'
+                        )}
+                      </span>
+                    </div>
+                    {scholarship.required_documents?.length > 0 && (
+                      <div className="progress-bar">
+                        <div
+                          className="progress-fill bg-emerald-500"
+                          style={{
+                            width: `${((scholarship.required_documents.length - (scholarship.missing_documents?.length || 0)) / scholarship.required_documents.length) * 100}%`
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Document list */}
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {scholarship.required_documents?.map((doc) => {
+                      const isMissing = scholarship.missing_documents?.includes(doc);
+                      return (
+                        <div key={doc} className={`flex items-center justify-between p-3 rounded-xl border text-xs ${
+                          isMissing ? 'bg-red-950/30 border-red-900/30 text-slate-400' : 'bg-emerald-950/20 border-emerald-900/30 text-slate-200'
+                        }`}>
+                          <span className="font-medium">{docLabel(doc)}</span>
+                          {isMissing ? (
+                            <span className="flex items-center gap-1 text-red-400 font-bold">
+                              <XCircle size={12} /> Missing
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                              <CheckCircle2 size={12} /> Ready
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Warning message if documents missing */}
+                  {(scholarship.missing_documents?.length || 0) > 0 && (
+                    <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-amber-950/30 border border-amber-800/30 text-amber-400 text-xs">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Missing Documents Warning</p>
+                        <p className="text-slate-400 mt-0.5">
+                          We recommend uploading missing files first to ensure your eligibility stands.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bypass checklist option */}
+                  {(scholarship.missing_documents?.length || 0) > 0 && (
+                    <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={bypassWarning}
+                        onChange={(e) => setBypassWarning(e.target.checked)}
+                        className="rounded border-slate-700 bg-slate-900 text-secondary-500 focus:ring-0"
+                      />
+                      I have these documents ready and will upload them later
+                    </label>
+                  )}
+
+                  {/* Footer actions */}
+                  <div className="flex gap-3 pt-3 border-t border-slate-800/80">
+                    <button
+                      onClick={() => setShowApplyModal(false)}
+                      className="btn-ghost flex-1 justify-center text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        window.open(scholarship.application_link || scholarship.official_website || '#', '_blank');
+                        setModalStep(2);
+                      }}
+                      disabled={
+                        (scholarship.required_documents?.length || 0) > 0 &&
+                        (scholarship.missing_documents?.length || 0) > 0 &&
+                        !bypassWarning
+                      }
+                      className="btn-primary flex-1 justify-center text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      Continue to Official Portal
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Confirmation */}
+              {modalStep === 2 && (
+                <div className="space-y-4 text-center py-4">
+                  <div className="w-16 h-16 rounded-full bg-secondary-950/60 border-2 border-secondary-500/30 flex items-center justify-center mx-auto text-secondary-400 animate-pulse mb-2">
+                    <Globe size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                      Official Portal Opened
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                      Fill out the form on the official website. Once completed, confirm the submission below.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-4 border border-slate-800 rounded-2xl text-left space-y-2">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Submission Status</h4>
+                    <p className="text-xs text-slate-300">
+                      Confirming will mark this scholarship application status as <span className="text-emerald-400 font-bold">Submitted</span> in your tracking history.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => setShowApplyModal(false)}
+                      className="btn-secondary flex-1 justify-center text-xs"
+                    >
+                      Not Yet / Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleApply();
+                        setShowApplyModal(false);
+                      }}
+                      className="btn-primary flex-1 justify-center text-xs bg-emerald-600 hover:bg-emerald-500"
+                    >
+                      Yes, I Submitted!
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
