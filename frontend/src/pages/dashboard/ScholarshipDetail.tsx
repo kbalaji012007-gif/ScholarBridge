@@ -12,6 +12,12 @@ import { applicationService } from '@/services/applications';
 import toast from 'react-hot-toast';
 import { DOCUMENT_TYPES } from '@/types';
 
+const ensureAbsoluteUrl = (url?: string) => {
+  if (!url || url === '#') return '#';
+  if (/^(https?:\/\/)/i.test(url)) return url;
+  return `https://${url}`;
+};
+
 export default function ScholarshipDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -436,7 +442,7 @@ export default function ScholarshipDetail() {
                     </button>
                     <button
                       onClick={() => {
-                        window.open(scholarship.application_link || scholarship.official_website || '#', '_blank');
+                        window.open(ensureAbsoluteUrl(scholarship.application_link || scholarship.official_website), '_blank');
                         setModalStep(2);
                       }}
                       disabled={
