@@ -22,6 +22,16 @@ export const adminService = {
     return res.data as User;
   },
 
+  async getDashboardStats() {
+    const res = await api.get('/dashboard/stats');
+    return res.data as {
+      eligibleScholarships: number;
+      savedScholarships: number;
+      appliedScholarships: number;
+      deadlinesThisWeek: number;
+    };
+  },
+
   async updateProfile(data: Partial<User>) {
     const res = await api.put('/users/me', data);
     return res.data as User;

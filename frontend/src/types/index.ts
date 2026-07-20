@@ -19,6 +19,7 @@ export interface User {
   is_minority: boolean;
   family_income?: number;
   has_disability: boolean;
+  disability_type?: string;
   has_sports_quota: boolean;
   has_ncc: boolean;
   gender?: string;
@@ -39,11 +40,14 @@ export interface Scholarship {
   last_date?: string;
   description?: string;
   official_website?: string;
+  application_link?: string;
   status: 'active' | 'inactive' | 'expired';
   min_cgpa?: number;
   max_income?: number;
   eligible_states?: string[];
+  applicable_state?: string;
   eligible_courses?: string[];
+  eligible_branches?: string[];
   eligible_categories?: string[];
   eligible_gender?: string;
   minority_only: boolean;

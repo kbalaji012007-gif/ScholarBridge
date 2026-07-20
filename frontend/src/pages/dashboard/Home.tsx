@@ -10,14 +10,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { scholarshipService } from '@/services/scholarships';
 import { applicationService } from '@/services/applications';
 import { notificationService } from '@/services/notifications';
+import { adminService } from '@/services/admin';
 import { Scholarship, Application, Notification } from '@/types';
 import toast from 'react-hot-toast';
 
 export default function DashboardHome() {
   const { user } = useAuth();
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+  const [savedScholarships, setSavedScholarships] = useState<Scholarship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [stats, setStats] = useState<{
+    eligibleScholarships: number;
+    savedScholarships: number;
+    appliedScholarships: number;
+    deadlinesThisWeek: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Document Checklist status (mock based on user profile completion/uploads)
@@ -37,10 +45,14 @@ export default function DashboardHome() {
       scholarshipService.list({}, 0, 15),
       applicationService.list(),
       notificationService.list(),
-    ]).then(([s, a, n]) => {
+      scholarshipService.getSaved(),
+      adminService.getDashboardStats(),
+    ]).then(([s, a, n, sv, st]) => {
       setScholarships(s);
       setApplications(a);
       setNotifications(n.slice(0, 3));
+      setSavedScholarships(sv);
+      setStats(st);
     }).catch(err => {
       console.error(err);
       toast.error('Failed to load dashboard data');
@@ -55,14 +67,10 @@ export default function DashboardHome() {
     return true;
   });
 
-  const eligibleCount = eligibleScholarships.length || 14; // fallback to user design doc value if empty
-  const savedCount = 6;
-  const appliedCount = applications.length || 2;
-  const deadlinesThisWeek = scholarships.filter(s => {
-    if (!s.last_date) return false;
-    const diff = new Date(s.last_date).getTime() - new Date().getTime();
-    return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000;
-  }).length || 3;
+  const eligibleCount = stats?.eligibleScholarships ?? 0;
+  const savedCount = stats?.savedScholarships ?? 0;
+  const appliedCount = stats?.appliedScholarships ?? 0;
+  const deadlinesThisWeek = stats?.deadlinesThisWeek ?? 0;
 
   if (loading) {
     return (
