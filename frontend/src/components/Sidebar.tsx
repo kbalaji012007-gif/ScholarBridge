@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -93,10 +93,21 @@ function NavItemLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.body.classList.remove('overflow-hidden');
+    }
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [isOpen]);
 
   const isActive = (path: string) => {
     if (path === '/dashboard') return location.pathname === '/dashboard';
@@ -110,17 +121,39 @@ export default function Sidebar() {
   const profilePercent = user?.profile_completion ?? 0;
 
   return (
-    <aside className="flex flex-col h-full bg-slate-950 border-r border-slate-800 w-64 shrink-0">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-5 border-b border-slate-800">
-        <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center shadow-glow-violet">
-          <Rocket size={18} className="text-white" />
+    <>
+      {/* Mobile Backdrop */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-slate-950 border-r border-slate-800 w-64 shrink-0 transition-transform duration-300 transform lg:static lg:translate-x-0 ${
+        isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
+      }`}>
+        {/* Logo */}
+        <div className="flex items-center justify-between px-4 py-5 border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center shadow-glow-violet">
+              <Rocket size={18} className="text-white" />
+            </div>
+            <div>
+              <span className="font-black text-slate-100 text-base" style={{ fontFamily: 'Poppins, sans-serif' }}>CareerBridge</span>
+              <span className="font-black gradient-text text-base" style={{ fontFamily: 'Poppins, sans-serif' }}> AI</span>
+            </div>
+          </div>
+          {/* Close button on mobile */}
+          <button onClick={onClose} className="lg:hidden p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 transition-colors">
+            <X size={18} />
+          </button>
         </div>
-        <div>
-          <span className="font-black text-slate-100 text-base" style={{ fontFamily: 'Poppins, sans-serif' }}>CareerBridge</span>
-          <span className="font-black gradient-text text-base" style={{ fontFamily: 'Poppins, sans-serif' }}> AI</span>
-        </div>
-      </div>
 
       {/* User Profile Mini Card */}
       <div className="px-3 py-3 border-b border-slate-800">
@@ -194,5 +227,6 @@ export default function Sidebar() {
         </Link>
       </div>
     </aside>
+    </>
   );
 }
