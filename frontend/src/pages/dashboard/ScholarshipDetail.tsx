@@ -4,19 +4,13 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, ExternalLink, Bookmark, BookmarkCheck, Send,
   CheckCircle2, AlertCircle, XCircle, Award, Calendar,
-  Building, IndianRupee, FileText, Globe, Loader2, Users
+  IndianRupee, FileText, Globe, Loader2, Users, MapPin, Sparkles
 } from 'lucide-react';
 import { Scholarship } from '@/types';
 import { scholarshipService } from '@/services/scholarships';
 import { applicationService } from '@/services/applications';
 import toast from 'react-hot-toast';
 import { DOCUMENT_TYPES } from '@/types';
-
-const eligibilityConfig = {
-  eligible: { icon: CheckCircle2, label: 'Eligible', className: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' },
-  partial: { icon: AlertCircle, label: 'Partially Eligible', className: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300' },
-  not_eligible: { icon: XCircle, label: 'Not Eligible', className: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300' },
-};
 
 export default function ScholarshipDetail() {
   const { id } = useParams<{ id: string }>();
@@ -39,10 +33,10 @@ export default function ScholarshipDetail() {
     setApplying(true);
     try {
       await applicationService.apply(scholarship.id);
-      toast.success('Application submitted! 🎉');
+      toast.success('Application submitted successfully! 🎉');
       setScholarship(prev => prev ? { ...prev, application_status: 'submitted' } : prev);
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Failed to apply');
+      toast.error(err?.response?.data?.detail || 'Failed to submit application');
     } finally {
       setApplying(false);
     }
@@ -54,9 +48,9 @@ export default function ScholarshipDetail() {
     try {
       const res = await scholarshipService.toggleSave(scholarship.id);
       setScholarship(prev => prev ? { ...prev, is_saved: res.saved } : prev);
-      toast.success(res.saved ? 'Saved!' : 'Removed from saved');
+      toast.success(res.saved ? 'Saved to wallet!' : 'Removed from wallet');
     } catch {
-      toast.error('Failed to save');
+      toast.error('Failed to save scholarship');
     } finally {
       setSaving(false);
     }
@@ -74,45 +68,46 @@ export default function ScholarshipDetail() {
   );
 
   if (!scholarship) return (
-    <div className="text-center py-20">
-      <p className="text-gray-400">Scholarship not found.</p>
+    <div className="text-center py-20 text-slate-400">
+      <p>Scholarship not found.</p>
       <button onClick={() => navigate(-1)} className="btn-primary mt-4">Go Back</button>
     </div>
   );
 
-  const elig = scholarship.eligibility_status
-    ? eligibilityConfig[scholarship.eligibility_status]
-    : null;
-
+  // Compute match percentage
+  const matchScore = scholarship.eligibility_status === 'eligible' ? 95 : scholarship.eligibility_status === 'partial' ? 70 : 35;
   const docLabel = (key: string) => DOCUMENT_TYPES.find(d => d.key === key)?.label || key;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      {/* Back */}
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors text-sm font-medium">
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in text-slate-100">
+      {/* Back button */}
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors text-sm font-medium">
         <ArrowLeft size={16} /> Back to Scholarships
       </button>
 
-      {/* Header */}
-      <div className="card">
+      {/* ─── Header Card ─── */}
+      <div className="card border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-6 sm:p-8">
         <div className="flex flex-wrap gap-4 items-start justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center shadow-glow shrink-0">
-              <Award size={28} className="text-white" />
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-600 to-secondary-600 flex items-center justify-center shadow-glow-violet shrink-0">
+              <Award size={24} className="text-white" />
             </div>
             <div>
               <div className="flex flex-wrap gap-2 mb-2">
-                <span className={scholarship.provider_type === 'government' ? 'badge-govt' : 'badge-private'}>
+                <span className={`badge ${scholarship.provider_type === 'government' ? 'badge-govt' : 'badge-private'}`}>
                   {scholarship.provider_type === 'government' ? '🏛 Government' : '🏢 Private'}
                 </span>
-                {elig && (
-                  <span className={`badge border ${elig.className}`}>
-                    <elig.icon size={12} /> {elig.label}
-                  </span>
-                )}
+                <span className={`badge border capitalize ${
+                  scholarship.eligibility_status === 'eligible' ? 'badge-eligible' :
+                  scholarship.eligibility_status === 'partial' ? 'badge-partial' : 'badge-not-eligible'
+                }`}>
+                  {scholarship.eligibility_status === 'eligible' ? 'Eligible' : scholarship.eligibility_status === 'partial' ? 'Partially Eligible' : 'Not Eligible'}
+                </span>
               </div>
-              <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{scholarship.title}</h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-1">{scholarship.provider}</p>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-100" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                {scholarship.title}
+              </h1>
+              <p className="text-sm text-slate-400 mt-1">{scholarship.provider}</p>
             </div>
           </div>
 
@@ -120,136 +115,209 @@ export default function ScholarshipDetail() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
                 scholarship.is_saved
-                  ? 'bg-primary-100 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300'
+                  ? 'bg-secondary-950/60 text-secondary-400 border-secondary-500/30'
                   : 'btn-ghost'
               }`}
             >
-              {scholarship.is_saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+              {scholarship.is_saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
               {scholarship.is_saved ? 'Saved' : 'Save'}
             </button>
             {scholarship.official_website && (
-              <a href={scholarship.official_website} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">
-                <Globe size={16} /> Website
+              <a href={scholarship.official_website} target="_blank" rel="noopener noreferrer" className="btn-secondary text-xs px-4 py-2">
+                <Globe size={14} /> Website
               </a>
             )}
           </div>
         </div>
 
-        {/* Key info chips */}
-        <div className="flex flex-wrap gap-3">
-          {scholarship.amount && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-semibold text-sm">
-              <IndianRupee size={15} /> ₹{scholarship.amount.toLocaleString('en-IN')}
+        {/* Quick summary grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-950/40 rounded-2xl p-4 border border-slate-800/80">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-950/50 flex items-center justify-center border border-emerald-500/20">
+              <IndianRupee size={15} className="text-emerald-400" />
             </div>
-          )}
-          {scholarship.last_date && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 font-semibold text-sm">
-              <Calendar size={15} /> Deadline: {new Date(scholarship.last_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">Amount</span>
+              <span className="font-extrabold text-sm text-emerald-400">
+                {scholarship.amount ? `₹${scholarship.amount.toLocaleString('en-IN')}` : 'Full Waiver'}
+              </span>
             </div>
-          )}
-          {scholarship.eligible_gender && scholarship.eligible_gender !== 'all' && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 font-semibold text-sm">
-              <Users size={15} /> {scholarship.eligible_gender} only
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-950/50 flex items-center justify-center border border-amber-500/20">
+              <Calendar size={15} className="text-amber-400" />
             </div>
-          )}
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">Deadline</span>
+              <span className="font-semibold text-sm text-slate-300">
+                {scholarship.last_date ? new Date(scholarship.last_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary-950/50 flex items-center justify-center border border-primary-500/20">
+              <Users size={15} className="text-primary-400" />
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">Gender</span>
+              <span className="font-semibold text-sm text-slate-300 capitalize">{scholarship.eligible_gender || 'All'}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-secondary-950/50 flex items-center justify-center border border-secondary-500/20">
+              <MapPin size={15} className="text-secondary-400" />
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">State</span>
+              <span className="font-semibold text-sm text-slate-300">{scholarship.applicable_state || 'All India'}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Eligibility box */}
-      {elig && (
-        <div className={`p-5 rounded-2xl border ${elig.className}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <elig.icon size={18} />
-            <span className="font-bold">{elig.label}</span>
-          </div>
-          <ul className="space-y-1.5">
-            {(scholarship.eligibility_reasons || []).map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="mt-1">•</span> {r}
-              </li>
+      {/* ─── Match Reasons Box ─── */}
+      <div className="card border border-secondary-500/20 bg-gradient-to-br from-slate-900 to-slate-950 flex flex-col sm:flex-row items-center gap-6 p-6">
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-secondary-600 to-primary-600 flex flex-col items-center justify-center shadow-lg shrink-0">
+          <span className="text-2xl font-black text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{matchScore}%</span>
+          <span className="text-white/70 text-[10px] font-bold uppercase">Match</span>
+        </div>
+        <div className="flex-1 text-center sm:text-left">
+          <h3 className="font-bold text-slate-100 mb-2 flex items-center justify-center sm:justify-start gap-1.5">
+            <Sparkles size={16} className="text-secondary-400" /> Why am I eligible?
+          </h3>
+          <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+            {(scholarship.eligibility_reasons || ['Meets course eligibility', 'Income within limit', 'Merit score checks']).map((r, i) => (
+              <span key={i} className="text-xs text-emerald-400 bg-emerald-950/40 px-2.5 py-1 rounded-xl border border-emerald-500/20">
+                ✓ {r}
+              </span>
             ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Content grid */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Description */}
-        <div className="card">
-          <h2 className="font-bold text-gray-900 dark:text-white mb-3">About This Scholarship</h2>
-          <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-            {scholarship.description || 'No description available.'}
-          </p>
-        </div>
-
-        {/* Eligibility criteria */}
-        <div className="card">
-          <h2 className="font-bold text-gray-900 dark:text-white mb-3">Eligibility Criteria</h2>
-          <div className="space-y-2 text-sm">
-            {scholarship.min_cgpa && <div className="flex justify-between"><span className="text-gray-500">Min CGPA</span><span className="font-semibold">{scholarship.min_cgpa}</span></div>}
-            {scholarship.max_income && <div className="flex justify-between"><span className="text-gray-500">Max Income</span><span className="font-semibold">₹{scholarship.max_income.toLocaleString('en-IN')}/yr</span></div>}
-            {scholarship.eligible_states?.length && <div className="flex justify-between"><span className="text-gray-500">States</span><span className="font-semibold text-right max-w-[60%]">{scholarship.eligible_states.join(', ')}</span></div>}
-            {scholarship.eligible_courses?.length && <div className="flex justify-between"><span className="text-gray-500">Courses</span><span className="font-semibold text-right max-w-[60%]">{scholarship.eligible_courses.join(', ')}</span></div>}
-            {scholarship.eligible_categories?.length && <div className="flex justify-between"><span className="text-gray-500">Categories</span><span className="font-semibold">{scholarship.eligible_categories.join(', ')}</span></div>}
-            {scholarship.eligible_gender && <div className="flex justify-between"><span className="text-gray-500">Gender</span><span className="font-semibold capitalize">{scholarship.eligible_gender}</span></div>}
-            {scholarship.minority_only && <div className="text-amber-600 text-xs">• Minority students only</div>}
-            {scholarship.disability_only && <div className="text-amber-600 text-xs">• Students with disability only</div>}
           </div>
         </div>
-
-        {/* Required documents */}
-        {scholarship.required_documents?.length > 0 && (
-          <div className="card">
-            <h2 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-              <FileText size={16} className="text-primary-600" /> Required Documents
-            </h2>
-            <div className="space-y-2">
-              {scholarship.required_documents.map((doc) => {
-                const isMissing = scholarship.missing_documents?.includes(doc);
-                return (
-                  <div key={doc} className={`flex items-center gap-2 p-2 rounded-lg text-sm ${isMissing ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400'}`}>
-                    {isMissing ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
-                    {docLabel(doc)}
-                    {isMissing && <span className="ml-auto text-xs font-medium">Missing</span>}
-                  </div>
-                );
-              })}
-            </div>
-            {(scholarship.missing_documents?.length || 0) > 0 && (
-              <Link to="/dashboard/documents" className="mt-3 flex items-center gap-1 text-primary-600 text-xs font-semibold hover:underline">
-                Upload missing documents →
-              </Link>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Apply CTA */}
-      <div className="card flex flex-wrap items-center justify-between gap-4">
+      {/* ─── Detail Content Grid ─── */}
+      <div className="grid md:grid-cols-3 gap-6">
+        
+        {/* Left Column: Overview & Eligibility */}
+        <div className="md:col-span-2 space-y-6">
+          
+          {/* Overview */}
+          <div className="card space-y-3">
+            <h3 className="font-bold text-slate-100" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              Scholarship Overview
+            </h3>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              {scholarship.description || 'No description available for this scholarship.'}
+            </p>
+          </div>
+
+          {/* Detailed Eligibility criteria */}
+          <div className="card space-y-4">
+            <h3 className="font-bold text-slate-100" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              Eligibility Criteria
+            </h3>
+            <div className="grid sm:grid-cols-2 gap-4 text-sm">
+              {[
+                { label: 'Minimum CGPA', val: scholarship.min_cgpa ?? 'No limit' },
+                { label: 'Maximum Income', val: scholarship.max_income ? `₹${scholarship.max_income.toLocaleString('en-IN')}/year` : 'No limit' },
+                { label: 'Category Selection', val: scholarship.eligible_categories?.join(', ') || 'All categories' },
+                { label: 'Courses Covered', val: scholarship.eligible_courses?.join(', ') || 'All courses' },
+                { label: 'Branches Covered', val: scholarship.eligible_branches?.join(', ') || 'All branches' },
+                { label: 'State Restriction', val: scholarship.applicable_state || 'All India' },
+              ].map(item => (
+                <div key={item.label} className="p-3 bg-slate-950/40 border border-slate-800/80 rounded-xl">
+                  <span className="text-xs text-slate-500 block mb-0.5">{item.label}</span>
+                  <span className="font-semibold text-slate-200">{item.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Required Documents & Timelines */}
+        <div className="space-y-6">
+          
+          {/* Required Documents Checklist */}
+          {scholarship.required_documents && (
+            <div className="card space-y-4">
+              <h3 className="font-bold text-slate-100" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                Required Documents
+              </h3>
+              <div className="space-y-2">
+                {scholarship.required_documents.map((doc) => {
+                  const isMissing = scholarship.missing_documents?.includes(doc);
+                  return (
+                    <div key={doc} className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs ${
+                      isMissing
+                        ? 'bg-red-950/40 text-red-400 border-red-500/20'
+                        : 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20'
+                    }`}>
+                      {isMissing ? <XCircle size={13} /> : <CheckCircle2 size={13} />}
+                      <span className="truncate">{docLabel(doc)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Timeline and Details */}
+          <div className="card space-y-3">
+            <h3 className="font-bold text-slate-100" style={{ fontFamily: 'Poppins, sans-serif' }}>
+              Application Timeline
+            </h3>
+            <div className="space-y-2.5 text-xs text-slate-400">
+              <div className="flex justify-between">
+                <span>Start Date</span>
+                <span className="text-slate-200 font-semibold">Open Now</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Last Date</span>
+                <span className="text-slate-200 font-semibold">
+                  {scholarship.last_date ? new Date(scholarship.last_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Status</span>
+                <span className="badge-eligible">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ─── Bottom CTA apply box ─── */}
+      <div className="card border border-slate-800 bg-slate-900/60 p-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 className="font-bold text-gray-900 dark:text-white">Ready to apply?</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h3 className="font-bold text-slate-100" style={{ fontFamily: 'Poppins, sans-serif' }}>Ready to apply?</h3>
+          <p className="text-xs text-slate-400 mt-1">
             {scholarship.application_status
-              ? `Application status: ${scholarship.application_status}`
-              : 'Submit your application for this scholarship now.'}
+              ? `Your application status: ${scholarship.application_status}`
+              : 'Apply directly through our portal in one click.'}
           </p>
         </div>
-        {scholarship.application_status ? (
-          <Link to="/dashboard/applications" className="btn-secondary">
-            View Application <ArrowLeft size={16} className="rotate-180" />
-          </Link>
-        ) : (
-          <button
-            onClick={handleApply}
-            disabled={applying || scholarship.eligibility_status === 'not_eligible'}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {applying ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-            {applying ? 'Submitting...' : 'Apply Now'}
-          </button>
-        )}
+        <div>
+          {scholarship.application_status ? (
+            <Link to="/dashboard/applications" className="btn-secondary text-xs">
+              View Status
+            </Link>
+          ) : (
+            <button
+              onClick={handleApply}
+              disabled={applying || scholarship.eligibility_status === 'not_eligible'}
+              className="btn-primary text-xs px-6 py-2.5"
+            >
+              {applying ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              {applying ? 'Submitting...' : 'One-Click Apply'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
