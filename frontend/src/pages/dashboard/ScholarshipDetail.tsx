@@ -442,17 +442,27 @@ export default function ScholarshipDetail() {
                     </button>
                     <button
                       onClick={() => {
-                        window.open(ensureAbsoluteUrl(scholarship.application_link || scholarship.official_website), '_blank');
+                        const portal = scholarship.application_link || scholarship.official_website;
+                        if (!portal || portal === '#' || portal.trim() === '') {
+                          toast.error('Official application link is not available.');
+                          return;
+                        }
+                        window.open(ensureAbsoluteUrl(portal), '_blank', 'noopener,noreferrer');
                         setModalStep(2);
                       }}
                       disabled={
-                        (scholarship.required_documents?.length || 0) > 0 &&
-                        (scholarship.missing_documents?.length || 0) > 0 &&
-                        !bypassWarning
+                        !(scholarship.application_link || scholarship.official_website) ||
+                        (scholarship.application_link || scholarship.official_website) === '#' ||
+                        (scholarship.application_link || scholarship.official_website)?.trim() === '' ||
+                        ((scholarship.required_documents?.length || 0) > 0 &&
+                          (scholarship.missing_documents?.length || 0) > 0 &&
+                          !bypassWarning)
                       }
-                      className="btn-primary flex-1 justify-center text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="btn-primary flex-1 justify-center text-xs disabled:opacity-30 disabled:cursor-not-allowed text-center"
                     >
-                      Continue to Official Portal
+                      {(scholarship.application_link || scholarship.official_website) && (scholarship.application_link || scholarship.official_website) !== '#' && (scholarship.application_link || scholarship.official_website)?.trim() !== ''
+                        ? 'Continue to Official Portal'
+                        : 'Official application link is not available.'}
                     </button>
                   </div>
                 </div>
