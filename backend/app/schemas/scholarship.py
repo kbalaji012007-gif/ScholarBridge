@@ -41,6 +41,8 @@ class ScholarshipBase(BaseModel):
     benefits: Optional[str] = None
     is_verified: bool = False
     last_updated: Optional[datetime] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
 
 
 class ScholarshipCreate(ScholarshipBase):

@@ -3,6 +3,7 @@ Eligibility Engine – calculates if a student qualifies for a scholarship.
 Returns: "eligible" | "partial" | "not_eligible" + reasons list
 """
 from typing import Tuple, List
+from datetime import datetime
 from app.models.user import User
 from app.models.scholarship import Scholarship
 

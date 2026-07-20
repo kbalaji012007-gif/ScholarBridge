@@ -103,11 +103,15 @@ async def seed_demo_data():
                 category="General",
                 family_income=400000,
                 gender="male",
+                dob="2004-05-15",
                 profile_completion=75,
             )
             db.add(student)
             db.commit()
             db.refresh(student)
+        else:
+            student.dob = "2004-05-15"
+            db.commit()
 
         # Seed scholarships only if none exist
         import csv
@@ -126,6 +130,38 @@ async def seed_demo_data():
                         def to_bool(val):
                             return val.lower() == "true"
                         
+                        provider_type = row["provider_type"]
+                        scholarship_type = row.get("scholarship_type", "national")
+                        max_income = to_float(row["max_income"])
+                        min_cgpa = to_float(row["min_cgpa"])
+                        
+                        # Generate required documents list automatically based on type/criteria
+                        docs = ["aadhaar", "marks_card", "passport_photo", "bank_passbook"]
+                        if provider_type == "government" or scholarship_type == "need" or (max_income and max_income <= 800000):
+                            docs.append("income_certificate")
+                            docs.append("caste_certificate")
+                        if scholarship_type == "merit" or min_cgpa:
+                            docs.append("bonafide")
+                        required_docs = list(set(docs))
+                        
+                        # Generate realistic contact details
+                        provider_clean = row["provider"].lower().replace(" ", "")
+                        contact_email = f"contact@{provider_clean}.org"
+                        if "reliance" in provider_clean:
+                            contact_email = "scholarships@reliancefoundation.org"
+                            contact_phone = "+91 22 4001 7000"
+                        elif "tata" in provider_clean:
+                            contact_email = "tatatrusts@tata.com"
+                            contact_phone = "+91 22 6665 8282"
+                        elif "aicte" in provider_clean:
+                            contact_email = "pragati@aicte-india.org"
+                            contact_phone = "+91 11 2613 1577"
+                        elif "ssp" in provider_clean or "karnataka" in provider_clean:
+                            contact_email = "ssp.helpdesk@karnataka.gov.in"
+                            contact_phone = "080-22371030"
+                        else:
+                            contact_phone = "+91 80 2263 1800"
+
                         s = Scholarship(
                             title=row["title"],
                             provider=row["provider"],
@@ -150,6 +186,9 @@ async def seed_demo_data():
                             sports_quota=to_bool(row["sports_quota"]),
                             ncc_required=to_bool(row["ncc_required"]),
                             is_verified=to_bool(row["is_verified"]),
+                            required_documents=required_docs,
+                            contact_email=contact_email,
+                            contact_phone=contact_phone,
                             created_by=admin.id,
                         )
                         db.add(s)

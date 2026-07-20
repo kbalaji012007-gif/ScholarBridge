@@ -61,6 +61,8 @@ def run_auto_migrations():
                 "last_updated": "TIMESTAMP" if not is_sqlite else "DATETIME",
                 "official_notification": "VARCHAR(512)",
                 "application_link": "VARCHAR(512)",
+                "contact_email": "VARCHAR(100)",
+                "contact_phone": "VARCHAR(30)",
             }
             
             for col_name, col_type in scholarships_to_add.items():

@@ -46,6 +46,8 @@ class Scholarship(Base):
     benefits = Column(Text, nullable=True)
     is_verified = Column(Boolean, default=False)       # Manually verified from official source
     last_updated = Column(DateTime, nullable=True)
+    contact_email = Column(String(100), nullable=True)
+    contact_phone = Column(String(30), nullable=True)
     created_by = Column(Integer, nullable=True)  # admin user id
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

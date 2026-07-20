@@ -96,7 +96,7 @@ def list_scholarships(
 
     # Filter eligible client-side
     if eligible_only:
-        result = [r for r in result if r.eligibility_status == "eligible"]
+        result = [r for r in result if r.eligibility_status in ("eligible", "partial")]
 
     return result
 
