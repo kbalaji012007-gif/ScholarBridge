@@ -4,8 +4,8 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # App
-    APP_NAME: str = "ScholarBridge"
-    APP_VERSION: str = "1.0.0"
+    APP_NAME: str = "CareerBridge AI"
+    APP_VERSION: str = "2.0.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"
 
@@ -16,23 +16,33 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Database
-    DATABASE_URL: str = "sqlite:///./scholarbridge.db"
+    DATABASE_URL: str = "sqlite:///./careerbridge.db"
 
     # CORS
-    FRONTEND_URL: str = "https://scholar-bridge-lyart.vercel.app"
+    FRONTEND_URL: str = "https://careerbridge-ai.vercel.app"
 
     # File Upload
     UPLOAD_DIR: str = "uploads"
+    RESUME_UPLOAD_DIR: str = "uploads/resumes"
     MAX_FILE_SIZE_MB: int = 5
+    MAX_RESUME_SIZE_MB: int = 10
     ALLOWED_FILE_TYPES: list = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
+
+    # ─── AI Configuration ───────────────────────────────────────
+    # Provider: "gemini" | "openai" | "mock"
+    AI_PROVIDER: str = "mock"
+    GEMINI_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    AI_MAX_TOKENS: int = 2048
+    AI_TEMPERATURE: float = 0.7
 
     # Email (optional)
     SMTP_HOST: str = "smtp.mailtrap.io"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    EMAILS_FROM_EMAIL: str = "noreply@scholarbridge.com"
-    EMAILS_FROM_NAME: str = "ScholarBridge"
+    EMAILS_FROM_EMAIL: str = "noreply@careerbridge.ai"
+    EMAILS_FROM_NAME: str = "CareerBridge AI"
 
     # Firebase (optional)
     FIREBASE_CREDENTIALS_PATH: str = ""

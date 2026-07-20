@@ -1,8 +1,8 @@
-# ScholarBridge 🎓
+# CareerBridge AI 🎓💼🤖
 
-> AI-Powered Scholarship Eligibility & Document Verification Portal
+> One Platform for Scholarships, Careers, Placements and AI Guidance.
 
-A full-stack production-ready web application that helps Indian students discover scholarships, verify documents, track applications, and receive deadline reminders.
+CareerBridge AI is a comprehensive, production-ready AI platform that guides Indian students from admission to placement. It helps students discover scholarships, verify document compliance, analyze resumes, identify skill gaps, build personalized learning roadmaps, and practice mock interviews.
 
 ---
 
@@ -31,7 +31,7 @@ py -m venv .venv
 pip install -r requirements.txt
 
 # Copy env file
-cp ../.env.example .env
+cp .env.example .env
 
 # Start server
 uvicorn app.main:app --reload --port 8000
@@ -40,7 +40,7 @@ uvicorn app.main:app --reload --port 8000
 **Backend runs at:** http://localhost:8000  
 **API Docs:** http://localhost:8000/docs
 
-### 2. Frontend (React + Vite)
+### 2. Frontend (React + Vite + Tailwind)
 
 ```bash
 cd frontend
@@ -60,8 +60,8 @@ npm run dev
 
 ```bash
 # From project root
-cp .env.example .env
-# Edit .env with your settings
+cp backend/.env.example .env
+# Edit .env with your settings (e.g. AI_PROVIDER=mock or gemini)
 
 docker-compose up --build
 ```
@@ -83,16 +83,18 @@ docker-compose up --build
 ## 📁 Project Structure
 
 ```
-scholarbridge/
+careerbridge-ai/
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/routes/      # Auth, Users, Scholarships, Applications, Documents, Analytics
+│   │   ├── api/v1/routes/      # Auth, Users, Scholarships, Applications, Documents, Resume, Career, Roadmaps, Interview, Certifications, Chat, Analytics
 │   │   ├── core/               # Config, Security, Dependencies
 │   │   ├── database/           # SQLAlchemy base
-│   │   ├── models/             # User, Scholarship, Application, Document, Notification, SavedScholarship
+│   │   ├── models/             # SQLAlchemy DB schemas (15 models)
 │   │   ├── schemas/            # Pydantic schemas
-│   │   ├── services/           # Eligibility engine, Document verification
-│   │   └── main.py             # FastAPI app
+│   │   ├── services/           # AI services (Gemini), Eligibility engine, Document verification
+│   │   └── main.py             # FastAPI app entry point
+│   ├── data/
+│   │   └── scholarships.csv    # 25+ real-world Indian scholarships dataset
 │   ├── requirements.txt
 │   └── Dockerfile
 │
@@ -101,7 +103,7 @@ scholarbridge/
 │   │   ├── components/         # Navbar, Sidebar, UI components
 │   │   ├── contexts/           # AuthContext, ThemeContext
 │   │   ├── layouts/            # Public, Dashboard, Admin layouts
-│   │   ├── pages/              # Landing, Auth, Dashboard, Admin pages
+│   │   ├── pages/              # Landing, Auth, Dashboard, Admin pages (Resume, Career, Roadmaps, Mock Prep, etc.)
 │   │   ├── router/             # React Router with protected routes
 │   │   ├── services/           # Axios API services
 │   │   └── types/              # TypeScript interfaces
@@ -119,18 +121,21 @@ scholarbridge/
 ## ✨ Features
 
 ### Student Portal
-- 🔍 **Smart Scholarship Discovery** with search, filters, sorting
-- 🤖 **AI Eligibility Engine** – instant matching by CGPA, income, category, state, course, gender
-- 📁 **Document Wallet** – upload, preview, replace, track verification status
-- 📊 **Application Tracker** – real-time status from Draft → Approved
-- 🔔 **Notifications** – deadlines, document updates, application changes
-- 🌙 **Dark Mode** toggle
+- 🔍 **Scholarship Discovery & Filtering** – instant matching by CGPA, income, category, state, course, gender, etc.
+- 📄 **AI Resume Analyzer** – ATS score, skill extraction, strengths, weaknesses, and improvement recommendations.
+- 🎯 **Career Match Engine** – finds jobs and internships matching your skills with match percentage heatmaps.
+- ⚡ **Skill Gap Analyzer** – paste any job description to compare against your skills and get recommended courses/docs.
+- 🗺️ **Personalized Learning Roadmaps** – AI-generated 30/60/90-day roadmaps with YouTube links, docs, and projects.
+- 🏆 **Interview Preparation** – practice HR, Technical, behavioral, and coding questions with mock scoring.
+- 🤖 **AI Career Assistant** – Perplexity-style chat assistant powered by Gemini AI with student profile context.
+- 📁 **Document Wallet** – upload, preview, replace, and track verification status of student credentials.
+- 📊 **Application Tracker** – real-time status tracking from draft to approval.
 
 ### Admin Portal
-- 📈 **Analytics Dashboard** with charts (Recharts)
-- 👥 **Student Management** table
-- 🎓 **Scholarship CRUD** with rich eligibility criteria editor
-- ✅ **Document Verification** – approve/reject with reasons
+- 📈 **Analytics Dashboard** – charts for student registration, document status, and application status.
+- 👥 **Student Management** – search, view profiles, and update status.
+- 🎓 **Scholarship Management** – create, read, update, delete scholarships with rich eligibility options.
+- ✅ **Document Verification** – approve or reject documents with specific remarks.
 
 ---
 
@@ -141,10 +146,11 @@ scholarbridge/
 | Frontend  | React 18, TypeScript, Vite, Tailwind CSS, Framer Motion |
 | Backend   | FastAPI, SQLAlchemy, Pydantic v2 |
 | Database  | SQLite (dev) / PostgreSQL (prod) |
+| AI        | Google Gemini API / google-generativeai |
+| Parsing   | pdfplumber, python-docx |
 | Auth      | JWT (python-jose) + bcrypt |
 | Charts    | Recharts |
 | Icons     | Lucide React |
-| Animations| Framer Motion |
 
 ---
 
@@ -154,11 +160,14 @@ scholarbridge/
 |--------|----------|-------------|
 | POST | `/api/v1/auth/signup` | Create account |
 | POST | `/api/v1/auth/login` | Login, get JWT |
-| GET | `/api/v1/scholarships/` | List with eligibility |
-| POST | `/api/v1/scholarships/{id}/save` | Toggle save |
-| POST | `/api/v1/applications/` | Apply |
-| POST | `/api/v1/documents/upload` | Upload document |
-| GET | `/api/v1/analytics/stats` | Admin analytics |
+| GET | `/api/v1/scholarships/` | List eligible scholarships |
+| POST | `/api/v1/resume/upload` | Upload & AI analyze resume |
+| GET | `/api/v1/resume/analysis` | Get latest resume analysis |
+| POST | `/api/v1/career/skill-gap` | Calculate skill gap vs JD |
+| GET | `/api/v1/career/jobs` | Get matched jobs |
+| POST | `/api/v1/roadmaps/generate` | Generate AI learning roadmap |
+| POST | `/api/v1/interview/generate-questions` | Generate AI mock interview questions |
+| POST | `/api/v1/chat/message` | Send message to AI Assistant |
 
 Full docs at: http://localhost:8000/docs
 
@@ -170,4 +179,4 @@ MIT License — Free for educational and personal use.
 
 ---
 
-Made with ❤️ for Indian students by ScholarBridge
+Made with ❤️ for Indian students by CareerBridge AI

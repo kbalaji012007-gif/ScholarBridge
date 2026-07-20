@@ -93,6 +93,34 @@ def check_eligibility(user: User, scholarship: Scholarship) -> Tuple[str, List[s
     if scholarship.ncc_required and not user.has_ncc:
         hard_failures.append("NCC certification required for this scholarship")
 
+    # --- Year of Study Check ---
+    if scholarship.year_of_study:
+        if user.year_of_study is None:
+            soft_warnings.append("Year of study not set in your profile")
+        elif user.year_of_study not in scholarship.year_of_study:
+            hard_failures.append(
+                f"Year of study '{user.year_of_study}' not eligible. Eligible years: {', '.join(str(y) for y in scholarship.year_of_study)}"
+            )
+
+    # --- Max Age Check ---
+    if scholarship.max_age is not None:
+        if user.dob is None:
+            soft_warnings.append("Date of birth not set in your profile to check age limit")
+        else:
+            try:
+                # Basic age calculation from dob string (YYYY-MM-DD or similar)
+                # Let's parse YYYY-MM-DD or standard formats
+                import dateutil.parser
+                birth_date = dateutil.parser.parse(user.dob)
+                today = datetime.utcnow()
+                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                if age > scholarship.max_age:
+                    hard_failures.append(
+                        f"Age exceeds limit of {scholarship.max_age} years (yours: {age})"
+                    )
+            except Exception:
+                soft_warnings.append("Could not parse date of birth to check age limit")
+
     # Determine overall status
     all_reasons = hard_failures + soft_warnings
     if hard_failures:

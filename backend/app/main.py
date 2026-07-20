@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="AI Scholarship Eligibility & Document Verification Portal",
+    description="CareerBridge AI — One Platform for Scholarships, Careers, Placements and AI Guidance",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -110,100 +110,185 @@ async def seed_demo_data():
             db.refresh(student)
 
         # Seed scholarships only if none exist
+        import csv
         if db.query(Scholarship).count() == 0:
-            scholarships = [
-                Scholarship(
-                    title="National Scholarship for SC/ST Students",
-                    provider="Ministry of Social Justice",
-                    provider_type="government",
-                    amount=50000,
-                    last_date=datetime.utcnow() + timedelta(days=45),
-                    description="Central government scholarship for meritorious SC/ST students pursuing higher education.",
-                    eligible_categories=["SC", "ST"],
-                    eligible_courses=["B.Tech", "B.Sc", "B.Com", "BA", "M.Tech"],
-                    min_cgpa=6.0,
-                    max_income=250000,
-                    eligible_gender="all",
-                    required_documents=["aadhaar", "income_certificate", "caste_certificate", "marks_card", "bonafide"],
-                    status="active",
-                    created_by=admin.id,
+            csv_path = os.path.join(os.path.dirname(__file__), "..", "data", "scholarships.csv")
+            if os.path.exists(csv_path):
+                with open(csv_path, mode="r", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        def to_float(val):
+                            try: return float(val) if val else None
+                            except: return None
+                        def to_int(val):
+                            try: return int(val) if val else None
+                            except: return None
+                        def to_bool(val):
+                            return val.lower() == "true"
+                        
+                        s = Scholarship(
+                            title=row["title"],
+                            provider=row["provider"],
+                            provider_type=row["provider_type"],
+                            scholarship_type=row.get("scholarship_type", "national"),
+                            amount=to_float(row["amount"]),
+                            amount_description=row["amount_description"],
+                            description=row["description"],
+                            official_website=row["official_website"],
+                            application_link=row["application_link"],
+                            last_date=datetime.utcnow() + timedelta(days=45),
+                            status="active",
+                            min_cgpa=to_float(row["min_cgpa"]),
+                            min_percentage=to_float(row["min_percentage"]),
+                            max_income=to_float(row["max_income"]),
+                            max_age=to_int(row["max_age"]),
+                            applicable_state=row["applicable_state"],
+                            eligible_states=[row["applicable_state"]] if row["applicable_state"] != "All" else None,
+                            eligible_gender=row["eligible_gender"],
+                            minority_only=to_bool(row["minority_only"]),
+                            disability_only=to_bool(row["disability_only"]),
+                            sports_quota=to_bool(row["sports_quota"]),
+                            ncc_required=to_bool(row["ncc_required"]),
+                            is_verified=to_bool(row["is_verified"]),
+                            created_by=admin.id,
+                        )
+                        db.add(s)
+                db.commit()
+                logger.info("Successfully seeded scholarships from CSV.")
+
+        # Seed demo Jobs
+        from app.models.job import Job, Internship
+        if db.query(Job).count() == 0:
+            jobs = [
+                Job(
+                    title="Junior Data Analyst",
+                    company="TechGen solutions",
+                    location="Bangalore, Karnataka",
+                    job_type="Full-time",
+                    work_mode="Hybrid",
+                    salary_min=400000.0,
+                    salary_max=600000.0,
+                    skills_required=["Python", "SQL", "Excel", "Data Visualization"],
+                    description="Analyze business data, generate reports, and build basic visualizations.",
+                    application_link="https://linkedin.com",
+                    deadline=datetime.utcnow() + timedelta(days=30),
                 ),
-                Scholarship(
-                    title="Post Matric Scholarship for OBC",
-                    provider="Ministry of Social Justice & Empowerment",
-                    provider_type="government",
-                    amount=35000,
-                    last_date=datetime.utcnow() + timedelta(days=60),
-                    description="Scholarship to support OBC students in post-matric education.",
-                    eligible_categories=["OBC"],
-                    min_cgpa=5.5,
-                    max_income=300000,
-                    eligible_gender="all",
-                    required_documents=["aadhaar", "income_certificate", "caste_certificate", "marks_card"],
-                    status="active",
-                    created_by=admin.id,
+                Job(
+                    title="Python Backend Developer",
+                    company="Innovate Labs",
+                    location="Remote",
+                    job_type="Full-time",
+                    work_mode="Remote",
+                    salary_min=600000.0,
+                    salary_max=900000.0,
+                    skills_required=["Python", "FastAPI", "SQL", "Git"],
+                    description="Develop RESTful APIs, manage databases, and deploy cloud microservices.",
+                    application_link="https://linkedin.com",
+                    deadline=datetime.utcnow() + timedelta(days=20),
                 ),
-                Scholarship(
-                    title="Tata Trusts Merit Scholarship",
-                    provider="Tata Trusts",
-                    provider_type="private",
-                    amount=100000,
-                    last_date=datetime.utcnow() + timedelta(days=30),
-                    description="Merit-based scholarship from Tata Trusts for outstanding engineering students.",
-                    eligible_courses=["B.Tech", "B.E"],
-                    min_cgpa=8.0,
-                    max_income=600000,
-                    eligible_gender="all",
-                    required_documents=["aadhaar", "income_certificate", "marks_card", "bonafide", "bank_passbook"],
-                    status="active",
-                    created_by=admin.id,
-                ),
-                Scholarship(
-                    title="Inspire Scholarship for Women in STEM",
-                    provider="Department of Science & Technology",
-                    provider_type="government",
-                    amount=80000,
-                    last_date=datetime.utcnow() + timedelta(days=90),
-                    description="Scholarship empowering women to pursue STEM education.",
-                    eligible_gender="female",
-                    eligible_courses=["B.Tech", "B.Sc", "M.Sc", "M.Tech"],
-                    min_cgpa=7.5,
-                    required_documents=["aadhaar", "marks_card", "bonafide"],
-                    status="active",
-                    created_by=admin.id,
-                ),
-                Scholarship(
-                    title="Reliance Foundation Undergraduate Scholarship",
-                    provider="Reliance Foundation",
-                    provider_type="private",
-                    amount=200000,
-                    last_date=datetime.utcnow() + timedelta(days=15),
-                    description="Comprehensive scholarship covering tuition and living expenses for undergraduate students.",
-                    min_cgpa=6.5,
-                    max_income=800000,
-                    eligible_gender="all",
-                    required_documents=["aadhaar", "income_certificate", "marks_card", "bonafide", "bank_passbook"],
-                    status="active",
-                    created_by=admin.id,
-                ),
-                Scholarship(
-                    title="Karnataka Rajyotsava Scholarship",
-                    provider="Government of Karnataka",
-                    provider_type="government",
-                    amount=25000,
-                    last_date=datetime.utcnow() + timedelta(days=20),
-                    description="State scholarship for Karnataka students celebrating Rajyotsava.",
-                    eligible_states=["Karnataka"],
-                    eligible_gender="all",
-                    min_cgpa=6.0,
-                    required_documents=["aadhaar", "bonafide", "marks_card"],
-                    status="active",
-                    created_by=admin.id,
+                Job(
+                    title="Associate Software Engineer",
+                    company="Wipro",
+                    location="Hyderabad, Telangana",
+                    job_type="Full-time",
+                    work_mode="On-site",
+                    salary_min=350000.0,
+                    salary_max=500000.0,
+                    skills_required=["Java", "SQL", "HTML", "CSS"],
+                    description="Entry-level software engineering role focusing on application development and maintenance.",
+                    application_link="https://wipro.com",
+                    deadline=datetime.utcnow() + timedelta(days=45),
                 ),
             ]
-            for s in scholarships:
-                db.add(s)
+            for j in jobs:
+                db.add(j)
             db.commit()
+            logger.info("Successfully seeded demo jobs.")
+
+        # Seed demo Internships
+        if db.query(Internship).count() == 0:
+            internships = [
+                Internship(
+                    title="Data Science Intern",
+                    company="Kaggle Labs",
+                    location="Remote",
+                    work_mode="Remote",
+                    duration_months=3,
+                    stipend_min=15000.0,
+                    stipend_max=20000.0,
+                    ppo_available=True,
+                    skills_required=["Python", "Pandas", "Scikit-learn"],
+                    application_link="https://internshala.com",
+                    deadline=datetime.utcnow() + timedelta(days=15),
+                ),
+                Internship(
+                    title="Web Development Intern",
+                    company="WebWorks",
+                    location="Bangalore, Karnataka",
+                    work_mode="Hybrid",
+                    duration_months=6,
+                    stipend_min=12000.0,
+                    stipend_max=18000.0,
+                    ppo_available=False,
+                    skills_required=["React", "HTML", "CSS", "JavaScript"],
+                    application_link="https://internshala.com",
+                    deadline=datetime.utcnow() + timedelta(days=10),
+                ),
+            ]
+            for i in internships:
+                db.add(i)
+            db.commit()
+            logger.info("Successfully seeded demo internships.")
+
+        # Seed Certifications
+        from app.models.certification import Certification
+        if db.query(Certification).count() == 0:
+            certs = [
+                Certification(
+                    name="Google Data Analytics Professional Certificate",
+                    provider="Google / Coursera",
+                    url="https://coursera.org",
+                    level="Beginner",
+                    skills_covered=["SQL", "Data Analysis", "Tableau", "R"],
+                    career_paths=["Data Analyst"],
+                    duration_hours=180,
+                    cost="Free (audit)",
+                    is_free=True,
+                    rating=4.8,
+                    description="Gain in-demand skills that can lead to an entry-level job in data analytics.",
+                ),
+                Certification(
+                    name="AWS Certified Cloud Practitioner",
+                    provider="AWS",
+                    url="https://aws.amazon.com",
+                    level="Beginner",
+                    skills_covered=["Cloud Computing", "AWS", "Networking"],
+                    career_paths=["Cloud Engineer", "DevOps Engineer"],
+                    duration_hours=40,
+                    cost="₹8,000",
+                    is_free=False,
+                    rating=4.7,
+                    description="Validates overall understanding of the AWS Cloud platform.",
+                ),
+                Certification(
+                    name="Python for Everybody Specialization",
+                    provider="University of Michigan / Coursera",
+                    url="https://coursera.org",
+                    level="Beginner",
+                    skills_covered=["Python", "Data Structures", "Databases"],
+                    career_paths=["Python Developer", "Data Analyst"],
+                    duration_hours=80,
+                    cost="Free (audit)",
+                    is_free=True,
+                    rating=4.9,
+                    description="Learn to program and analyze data with Python.",
+                ),
+            ]
+            for c in certs:
+                db.add(c)
+            db.commit()
+            logger.info("Successfully seeded certifications.")
+
     except Exception as e:
         db.rollback()
         logger.error("seed_demo_data error: %s", repr(e))

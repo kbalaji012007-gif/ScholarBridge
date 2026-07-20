@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -15,7 +15,7 @@ import ForgotPassword from '@/pages/auth/ForgotPassword';
 import VerifyEmail from '@/pages/auth/VerifyEmail';
 import NotFound from '@/pages/NotFound';
 
-// Student dashboard pages
+// Student dashboard — existing pages
 import DashboardHome from '@/pages/dashboard/Home';
 import Profile from '@/pages/dashboard/Profile';
 import Scholarships from '@/pages/dashboard/Scholarships';
@@ -32,13 +32,36 @@ import AdminScholarships from '@/pages/admin/Scholarships';
 import AdminDocuments from '@/pages/admin/Documents';
 import AddEditScholarship from '@/pages/admin/AddEditScholarship';
 
+// New career module pages — lazy loaded for performance
+const ResumeAnalyzer = lazy(() => import('@/pages/dashboard/ResumeAnalyzer'));
+const CareerMatch = lazy(() => import('@/pages/dashboard/CareerMatch'));
+const SkillGap = lazy(() => import('@/pages/dashboard/SkillGap'));
+const LearningRoadmap = lazy(() => import('@/pages/dashboard/LearningRoadmap'));
+const InterviewPrep = lazy(() => import('@/pages/dashboard/InterviewPrep'));
+const Projects = lazy(() => import('@/pages/dashboard/Projects'));
+const Certifications = lazy(() => import('@/pages/dashboard/Certifications'));
+const AIAssistant = lazy(() => import('@/pages/dashboard/AIAssistant'));
+const Analytics = lazy(() => import('@/pages/dashboard/Analytics'));
+
+// Suspense fallback
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-400 text-sm font-medium">Loading module...</p>
+      </div>
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen flex items-center justify-center bg-slate-950">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-500 dark:text-gray-400 font-medium">Loading ScholarBridge...</p>
+        <div className="w-12 h-12 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-400 font-medium">Loading CareerBridge AI...</p>
       </div>
     </div>
   );
@@ -87,6 +110,17 @@ export default function AppRouter() {
         <Route path="applications" element={<Applications />} />
         <Route path="documents" element={<Documents />} />
         <Route path="notifications" element={<Notifications />} />
+
+        {/* ─── NEW CAREER MODULES ─── */}
+        <Route path="resume" element={<Suspense fallback={<PageLoader />}><ResumeAnalyzer /></Suspense>} />
+        <Route path="career" element={<Suspense fallback={<PageLoader />}><CareerMatch /></Suspense>} />
+        <Route path="skills" element={<Suspense fallback={<PageLoader />}><SkillGap /></Suspense>} />
+        <Route path="roadmap" element={<Suspense fallback={<PageLoader />}><LearningRoadmap /></Suspense>} />
+        <Route path="interview" element={<Suspense fallback={<PageLoader />}><InterviewPrep /></Suspense>} />
+        <Route path="projects" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
+        <Route path="certifications" element={<Suspense fallback={<PageLoader />}><Certifications /></Suspense>} />
+        <Route path="ai-assistant" element={<Suspense fallback={<PageLoader />}><AIAssistant /></Suspense>} />
+        <Route path="analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
       </Route>
 
       {/* Admin routes */}

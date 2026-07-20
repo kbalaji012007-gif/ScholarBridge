@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Text, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Text, Enum, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -52,6 +52,16 @@ class User(Base):
     disability_type = Column(String(100), nullable=True)
     has_sports_quota = Column(Boolean, default=False)
     has_ncc = Column(Boolean, default=False)
+
+    # Career & Skills (new CareerBridge AI fields)
+    skills = Column(JSON, nullable=True)               # ["Python", "SQL", "React", ...]
+    career_interests = Column(JSON, nullable=True)     # ["Data Analyst", "Backend Dev", ...]
+    resume_path = Column(String(512), nullable=True)   # uploaded resume file path
+    linkedin_url = Column(String(512), nullable=True)
+    github_url = Column(String(512), nullable=True)
+    year_of_study = Column(Integer, nullable=True)     # 1, 2, 3, 4
+    target_company = Column(String(255), nullable=True)
+    target_role = Column(String(255), nullable=True)
 
     # Profile completion
     profile_completion = Column(Integer, default=0)

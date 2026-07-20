@@ -45,6 +45,16 @@ def get_db():
 def create_tables():
     """Import all models then create every table that doesn't already exist."""
     # Ensure all model classes are registered with Base.metadata before create_all
-    from app.models import user, scholarship, application, document, notification, saved_scholarship  # noqa: F401
+    from app.models import (  # noqa: F401
+        user, scholarship, application, document, notification, saved_scholarship,
+        resume_analysis, job, roadmap, interview, certification, chat
+    )
     Base.metadata.create_all(bind=engine)
     logger.info("create_tables: all tables created/verified.")
+    
+    # Run auto-migrations for schema updates
+    try:
+        from app.database.migration import run_auto_migrations
+        run_auto_migrations()
+    except Exception as e:
+        logger.error("Failed to run auto-migrations: %s", repr(e))
