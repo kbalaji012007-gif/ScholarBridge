@@ -25,6 +25,9 @@ def list_scholarships(
     provider_type: Optional[str] = None,
     min_amount: Optional[float] = None,
     max_income: Optional[float] = None,
+    eligible_only: Optional[bool] = False,
+    saved_only: Optional[bool] = False,
+    deadlines_only: Optional[bool] = False,
     sort_by: Optional[str] = "last_date",
     order: Optional[str] = "asc",
     skip: int = 0,
@@ -45,6 +48,18 @@ def list_scholarships(
     if gender:
         q = q.filter((Scholarship.eligible_gender == gender) | (Scholarship.eligible_gender == "all"))
 
+    # Filter saved scholarships query-side
+    saved_ids = {s.scholarship_id for s in current_user.saved_scholarships}
+    if saved_only:
+        q = q.filter(Scholarship.id.in_(saved_ids or [0]))
+
+    # Filter deadlines query-side
+    if deadlines_only:
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
+        seven_days = now + timedelta(days=7)
+        q = q.filter(Scholarship.last_date >= now, Scholarship.last_date <= seven_days)
+
     # Sorting
     sort_col = getattr(Scholarship, sort_by, Scholarship.last_date)
     if order == "desc":
@@ -54,9 +69,8 @@ def list_scholarships(
 
     scholarships = q.offset(skip).limit(limit).all()
 
-    # Get user docs and saved/applied statuses
+    # Get user docs and applied statuses
     user_docs = current_user.documents
-    saved_ids = {s.scholarship_id for s in current_user.saved_scholarships}
     applied = {a.scholarship_id: a.status for a in current_user.applications}
 
     result = []
@@ -79,6 +93,10 @@ def list_scholarships(
     if course:
         result = [r for r in result if not r.eligible_courses or any(
             course.lower() in c.lower() for c in r.eligible_courses)]
+
+    # Filter eligible client-side
+    if eligible_only:
+        result = [r for r in result if r.eligibility_status == "eligible"]
 
     return result
 

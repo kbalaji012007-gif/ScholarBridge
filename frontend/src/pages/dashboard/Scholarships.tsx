@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Filter, SlidersHorizontal, CheckCircle2, AlertCircle, XCircle, Bookmark, BookmarkCheck, IndianRupee, Calendar, ChevronRight, X } from 'lucide-react';
 import { Scholarship, ScholarshipFilters } from '@/types';
@@ -17,13 +17,36 @@ const eligBadge = {
 };
 
 export default function Scholarships() {
+  const [searchParams] = useSearchParams();
+  const filterType = searchParams.get('filter'); // 'eligible' | 'saved' | 'deadlines'
+
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [filters, setFilters] = useState<ScholarshipFilters>({
-    search: '', state: '', course: '', category: '', gender: '', provider_type: '', sort_by: 'last_date', order: 'asc'
+    search: '',
+    state: '',
+    course: '',
+    category: '',
+    gender: '',
+    provider_type: '',
+    sort_by: 'last_date',
+    order: 'asc',
+    eligible_only: filterType === 'eligible',
+    saved_only: filterType === 'saved',
+    deadlines_only: filterType === 'deadlines',
   });
+
+  // Keep filters sync'd if URL query parameters change
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      eligible_only: filterType === 'eligible',
+      saved_only: filterType === 'saved',
+      deadlines_only: filterType === 'deadlines',
+    }));
+  }, [filterType]);
 
   const fetchScholarships = async () => {
     setLoading(true);
@@ -37,19 +60,44 @@ export default function Scholarships() {
     }
   };
 
-  useEffect(() => { fetchScholarships(); }, [filters.sort_by, filters.order, filters.provider_type]);
+  // Auto-fetch whenever filters change
+  useEffect(() => {
+    fetchScholarships();
+  }, [
+    filters.sort_by,
+    filters.order,
+    filters.provider_type,
+    filters.state,
+    filters.course,
+    filters.category,
+    filters.gender,
+    filters.eligible_only,
+    filters.saved_only,
+    filters.deadlines_only
+  ]);
 
-  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); fetchScholarships(); };
-  const clearFilter = (key: keyof ScholarshipFilters) => setFilters(prev => ({ ...prev, [key]: '' }));
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchScholarships();
+  };
+
+  const clearFilter = (key: keyof ScholarshipFilters) => {
+    setFilters(prev => ({ ...prev, [key]: '' }));
+  };
 
   const handleSave = async (e: React.MouseEvent, id: number) => {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
     setSavingId(id);
     try {
       const res = await scholarshipService.toggleSave(id);
       setScholarships(prev => prev.map(s => s.id === id ? { ...s, is_saved: res.saved } : s));
-    } catch { toast.error('Failed'); }
-    finally { setSavingId(null); }
+      toast.success(res.saved ? 'Saved to wallet!' : 'Removed from wallet');
+    } catch {
+      toast.error('Failed to save');
+    } finally {
+      setSavingId(null);
+    }
   };
 
   const activeFilters = Object.entries(filters).filter(([k, v]) => v && !['search', 'sort_by', 'order'].includes(k));

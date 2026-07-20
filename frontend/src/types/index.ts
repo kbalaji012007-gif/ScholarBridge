@@ -140,6 +140,9 @@ export interface ScholarshipFilters {
   category?: string;
   gender?: string;
   provider_type?: string;
+  eligible_only?: boolean;
+  saved_only?: boolean;
+  deadlines_only?: boolean;
   sort_by?: string;
   order?: string;
 }

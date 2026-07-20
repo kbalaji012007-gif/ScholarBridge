@@ -86,27 +86,33 @@ export default function DashboardHome() {
       {/* ─── Top Stats Grid ─── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Eligible Scholarships', value: eligibleCount, icon: GraduationCap, color: 'text-primary-400', bg: 'bg-primary-950/40 border-primary-500/20' },
-          { label: 'Saved Scholarships', value: savedCount, icon: BookmarkCheck, color: 'text-secondary-400', bg: 'bg-secondary-950/40 border-secondary-500/20' },
-          { label: 'Applied Scholarships', value: appliedCount, icon: FileText, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-500/20' },
-          { label: 'Deadlines This Week', value: deadlinesThisWeek, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-950/40 border-amber-500/20' },
+          { label: 'Eligible Scholarships', value: eligibleCount, icon: GraduationCap, color: 'text-primary-400', bg: 'bg-primary-950/40 border-primary-500/20', to: '/dashboard/scholarships?filter=eligible' },
+          { label: 'Saved Scholarships', value: savedCount, icon: BookmarkCheck, color: 'text-secondary-400', bg: 'bg-secondary-950/40 border-secondary-500/20', to: '/dashboard/scholarships?filter=saved' },
+          { label: 'Applied Scholarships', value: appliedCount, icon: FileText, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-500/20', to: '/dashboard/applications' },
+          { label: 'Deadlines This Week', value: deadlinesThisWeek, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-950/40 border-amber-500/20', to: '/dashboard/scholarships?filter=deadlines' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
-            className={`card border ${stat.bg} hover:scale-[1.02] transition-transform duration-200`}
+            className="w-full"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-black gradient-text" style={{ fontFamily: 'Poppins, sans-serif' }}>{stat.value}</div>
-                <div className="text-xs text-slate-400 mt-1 font-medium">{stat.label}</div>
+            <Link
+              to={stat.to}
+              className={`card border ${stat.bg} block hover:scale-[1.02] hover:border-slate-600 transition-all duration-200 cursor-pointer`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-black gradient-text" style={{ fontFamily: 'Poppins, sans-serif' }}>{stat.value}</div>
+                  <div className="text-xs text-slate-400 mt-1 font-medium">{stat.label}</div>
+                  <span className="text-[10px] text-slate-500 hover:text-slate-300 font-bold block mt-2">View →</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-800">
+                  <stat.icon size={18} className={stat.color} />
+                </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-800">
-                <stat.icon size={18} className={stat.color} />
-              </div>
-            </div>
+            </Link>
           </motion.div>
         ))}
       </div>
